@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#fff5f8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>Dan's Rosé Soirée · Watercolor Portrait Booth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23E91E63'/%3E%3Ctext x='16' y='22' font-family='Georgia,serif' font-size='18' fill='%23fff' text-anchor='middle' font-style='italic' font-weight='700'%3ER%3C/text%3E%3C/svg%3E" />
+</head>
+<body class="kiosk-portrait">
+
+  <div class="bg" aria-hidden="true"></div>
+  <div class="bg__wash" aria-hidden="true"></div>
+  <div class="bg__grain" aria-hidden="true"></div>
+
+  <div class="rotate-warn" aria-hidden="true">
+    <div class="rotate-warn__icon">↻</div>
+    <div class="rotate-warn__title">Rotate to portrait</div>
+    <div class="rotate-warn__sub">This experience is portrait-only.</div>
+  </div>
+
+  <div class="app">
+
+    <header class="brandbar" role="banner">
+      <svg class="brandmark" viewBox="0 0 360 130" aria-label="Dan's Rosé Soirée">
+        <defs>
+          <linearGradient id="rose-grad" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0" stop-color="#E91E63"/>
+            <stop offset="1" stop-color="#AD1457"/>
+          </linearGradient>
+        </defs>
+        <text x="180" y="48" text-anchor="middle"
+              font-family="'Pinyon Script', cursive"
+              font-size="58" fill="url(#rose-grad)">Dan's</text>
+        <text x="180" y="92" text-anchor="middle"
+              font-family="'Playfair Display', serif"
+              font-size="34" letter-spacing="6"
+              font-weight="700" fill="#4a1d2c">ROSÉ&#160;SOIRÉE</text>
+        <line x1="80"  y1="108" x2="160" y2="108" stroke="#c98aa3" stroke-width="1"/>
+        <line x1="200" y1="108" x2="280" y2="108" stroke="#c98aa3" stroke-width="1"/>
+        <text x="180" y="120" text-anchor="middle"
+              font-family="'Inter', sans-serif"
+              font-size="9" letter-spacing="4"
+              fill="#8a4a5e">SOUTHAMPTON · WATERCOLOR PORTRAITS</text>
+      </svg>
+      <div class="presented">
+        <span class="presented__eyebrow">Presented around</span>
+        <span class="presented__brand">Bartenura Rosé × Château Roubine</span>
+      </div>
+    </header>
+
+    <main class="page">
+
+      <section class="hero" id="heroPanel">
+        <figure class="hero__art" aria-hidden="true">
+          <div class="hero__art-inner"></div>
+        </figure>
+
+        <p class="eyebrow">Memorial Day Weekend · Southampton</p>
+        <h1 class="hero__title">Your Rosé Soirée portrait, <em>painted in watercolor</em></h1>
+        <p class="hero__lede">Step into the booth, take a selfie, and we'll paint you a Hamptons-summer watercolor portrait — delivered to your inbox in about 60 seconds.</p>
+
+        <ol class="hero__how">
+          <li><span>1</span> Tap <strong>Take My Portrait</strong> · 5-sec countdown</li>
+          <li><span>2</span> Drop your <strong>email</strong> while we paint</li>
+          <li><span>3</span> Your watercolor portrait <strong>arrives by email</strong></li>
+        </ol>
+
+        <button class="btn btn--primary btn--block" id="heroStart" type="button">✦ Take My Portrait</button>
+
+        <p class="optin">
+          By tapping, you agree to receive your portrait by email from Dan's Rosé Soirée. One-time send · no marketing list.
+        </p>
+      </section>
+
+      <section class="booth" id="boothPanel" hidden>
+        <div class="booth__cam-wrap" aria-label="Photo booth viewfinder">
+          <video class="booth__cam" id="boothCam" playsinline muted autoplay></video>
+          <img class="booth__cam" id="boothPreview" alt="" hidden />
+          <canvas id="boothCanvas" hidden></canvas>
+
+          <div class="booth__hud">
+            <span class="booth__hud-rec">● REC</span>
+            <span class="booth__hud-tag">ROSÉ SOIRÉE · 9:16</span>
+          </div>
+          <div class="booth__corners" aria-hidden="true"></div>
+          <div class="booth__countdown" id="boothCountdown" hidden>5</div>
+          <div class="booth__flash" id="boothFlash"></div>
+        </div>
+
+        <div class="booth__row">
+          <button class="btn btn--primary btn--block" id="boothCapture" type="button">📸 Take Photo</button>
+          <button class="btn btn--ghost"   id="boothRetake"   type="button" hidden>Retake</button>
+          <button class="btn btn--accent"  id="boothGenerate" type="button" hidden>✨ Paint My Portrait</button>
+        </div>
+
+        <div class="booth__err" id="boothErr" role="alert"></div>
+
+        <div class="booth__queue" id="boothQueue" aria-hidden="true" role="status"></div>
+
+        <button class="booth__back" id="boothBack" type="button" aria-label="Back">← Back</button>
+      </section>
+
+    </main>
+
+    <div class="toaster" id="toaster" aria-live="polite" aria-atomic="false"></div>
+
+    <div class="genpill" id="genPill" aria-hidden="true" role="status">
+      <span class="genpill__spinner" aria-hidden="true"></span>
+      <span class="genpill__text">~60 sec · painting your portrait<br><strong>We'll email it the second it's ready</strong></span>
+    </div>
+
+    <div class="resmodal" id="resModal" aria-hidden="true" role="dialog" aria-labelledby="resModalTitle">
+      <div class="resmodal__panel">
+        <div class="resmodal__title" id="resModalTitle">✦ Your Rosé Soirée portrait is ready</div>
+        <img class="resmodal__img" id="resModalImg" alt="Your watercolor portrait" />
+        <div class="resmodal__status" id="resModalStatus">✓ Sent to your email</div>
+        <div class="resmodal__cta" id="resModalCta">Post on Instagram and tag <strong>@danspapers</strong>, <strong>@bartenurarose</strong>, and <strong>@powerwyze</strong></div>
+        <div class="resmodal__hint" id="resModalHint">Tap anywhere to dismiss · auto-closes in <span id="resModalTimer">15</span>s</div>
+      </div>
+    </div>
+
+    <div class="modal" id="emailModal" aria-hidden="true" role="dialog" aria-labelledby="emailModalTitle">
+      <div class="modal__panel">
+        <div class="modal__title" id="emailModalTitle">✦ Snap! Your portrait is being painted</div>
+        <div class="modal__sub">Drop your email — we'll send your watercolor Rosé Soirée portrait the second it's ready (~60 sec).</div>
+        <input class="modal__input" id="emailModalInput" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
+        <div class="modal__optin">
+          By continuing, you agree to receive your portrait by email. No marketing list · one-time send.
+        </div>
+        <div class="modal__err" id="emailModalErr"></div>
+        <div class="modal__row">
+          <button class="btn btn--ghost"   id="emailModalCancel" type="button">Cancel</button>
+          <button class="btn btn--primary" id="emailModalOk"     type="button">Send me my portrait</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Sponsored by <strong>Bartenura Rosé</strong> · Painted by <strong>PowerWyze</strong> · © Dan's Rosé Soirée
+    </div>
+
+  </div>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

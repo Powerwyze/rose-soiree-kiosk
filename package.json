@@ -1,0 +1,11 @@
+{
+  "name": "rose-soiree-kiosk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dan's Rosé Soirée · Bartenura × Château Roubine watercolor portrait kiosk",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "formidable": "^3.5.1",
+    "nodemailer": "^6.9.13"
+  }
+}

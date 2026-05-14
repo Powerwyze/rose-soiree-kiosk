@@ -274,7 +274,8 @@
         throw new Error(text || `Painter error (${res.status})`);
       }
       const imageBuf = await res.arrayBuffer();
-      const imageBlob = new Blob([imageBuf], { type: 'image/png' });
+      const rawBlob  = new Blob([imageBuf], { type: 'image/png' });
+      const imageBlob = await stampBranding(rawBlob);
       const imageUrl  = URL.createObjectURL(imageBlob);
 
       // Send to email
@@ -314,6 +315,115 @@
         genPill.classList.remove('is-active');
         genPill.setAttribute('aria-hidden', 'true');
       }
+    }
+  }
+
+  // ---------- Branding overlay ----------
+  // Stamps a top "Bartenura Rosé" title and a bottom brand strip with
+  // BARTENURA ROSÉ + CHÂTEAU ROUBINE wordmarks onto the generated portrait,
+  // so the elements are reliable even if the image model omits text.
+  function loadImageFromBlob(blob){
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+
+  async function stampBranding(blob){
+    try {
+      const img = await loadImageFromBlob(blob);
+      const W = img.naturalWidth || img.width;
+      const H = img.naturalHeight || img.height;
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, W, H);
+
+      // ---- Top title band: "Bartenura Rosé" ----
+      const topBandH = Math.round(H * 0.11);
+      const topGrad = ctx.createLinearGradient(0, 0, 0, topBandH);
+      topGrad.addColorStop(0, 'rgba(255, 248, 250, 0.92)');
+      topGrad.addColorStop(1, 'rgba(255, 248, 250, 0.0)');
+      ctx.fillStyle = topGrad;
+      ctx.fillRect(0, 0, W, topBandH);
+
+      const titleFontSize = Math.round(H * 0.058);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `600 italic ${titleFontSize}px "Playfair Display", "Cormorant Garamond", "Didot", "Times New Roman", serif`;
+      // soft shadow for legibility
+      ctx.shadowColor = 'rgba(120, 40, 70, 0.18)';
+      ctx.shadowBlur = Math.round(H * 0.006);
+      ctx.shadowOffsetY = 1;
+      ctx.fillStyle = '#7a2a47'; // deep rosé
+      ctx.fillText('Bartenura Rosé', W / 2, topBandH * 0.55);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+
+      // tiny decorative rule under the title
+      const ruleY = Math.round(topBandH * 0.92);
+      const ruleW = Math.round(W * 0.22);
+      ctx.strokeStyle = 'rgba(122, 42, 71, 0.55)';
+      ctx.lineWidth = Math.max(1, Math.round(H * 0.0015));
+      ctx.beginPath();
+      ctx.moveTo((W - ruleW) / 2, ruleY);
+      ctx.lineTo((W + ruleW) / 2, ruleY);
+      ctx.stroke();
+
+      // ---- Bottom brand strip ----
+      const stripH = Math.round(H * 0.085);
+      const stripY = H - stripH;
+      // subtle ivory bar with a thin rose-gold rule on top
+      ctx.fillStyle = 'rgba(252, 246, 240, 0.94)';
+      ctx.fillRect(0, stripY, W, stripH);
+      ctx.strokeStyle = 'rgba(180, 130, 110, 0.55)';
+      ctx.lineWidth = Math.max(1, Math.round(H * 0.0018));
+      ctx.beginPath();
+      ctx.moveTo(0, stripY);
+      ctx.lineTo(W, stripY);
+      ctx.stroke();
+
+      const brandFont = Math.round(H * 0.024);
+      const tagFont   = Math.round(H * 0.013);
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#3a1a26';
+
+      // Left wordmark: BARTENURA ROSÉ
+      const leftX = Math.round(W * 0.255);
+      const midY  = stripY + stripH / 2;
+      ctx.textAlign = 'center';
+      ctx.font = `700 ${brandFont}px "Trajan Pro", "Cinzel", "Cormorant Garamond", "Times New Roman", serif`;
+      ctx.fillText('BARTENURA', leftX, midY - brandFont * 0.5);
+      ctx.font = `400 italic ${Math.round(brandFont * 0.9)}px "Playfair Display", "Cormorant Garamond", "Didot", serif`;
+      ctx.fillStyle = '#7a2a47';
+      ctx.fillText('Rosé', leftX, midY + brandFont * 0.55);
+
+      // Center divider dot
+      ctx.fillStyle = 'rgba(58, 26, 38, 0.55)';
+      const dotR = Math.max(2, Math.round(H * 0.003));
+      ctx.beginPath();
+      ctx.arc(W / 2, midY, dotR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right wordmark: CHÂTEAU ROUBINE
+      const rightX = Math.round(W * 0.745);
+      ctx.fillStyle = '#3a1a26';
+      ctx.font = `700 ${brandFont}px "Trajan Pro", "Cinzel", "Cormorant Garamond", "Times New Roman", serif`;
+      ctx.fillText('CHÂTEAU ROUBINE', rightX, midY - brandFont * 0.5);
+      ctx.font = `400 ${tagFont}px "Cormorant Garamond", "Times New Roman", serif`;
+      ctx.fillStyle = 'rgba(58, 26, 38, 0.75)';
+      ctx.fillText('CÔTES DE PROVENCE', rightX, midY + brandFont * 0.6);
+
+      const stamped = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      return stamped || blob;
+    } catch (e){
+      console.error('stampBranding error', e);
+      return blob;
     }
   }
 

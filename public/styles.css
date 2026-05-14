@@ -383,6 +383,7 @@ body {
   z-index: 5;
   pointer-events: none;
 }
+.booth__countdown[hidden] { display: none !important; }
 .booth__flash {
   position: absolute; inset: 0;
   background: #fff;

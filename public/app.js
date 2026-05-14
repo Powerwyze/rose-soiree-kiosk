@@ -43,6 +43,7 @@
   let capturedBlob = null;
   let activeJobs = 0;
   let resModalTimerId = null;
+  let countdownTickId = null;
 
   // ---------- Helpers ----------
   const isEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((s || '').trim());
@@ -76,6 +77,7 @@
 
   // ---------- Panel switching ----------
   function showHero(){
+    hideCountdown();
     boothPanel.setAttribute('hidden', '');
     heroPanel.removeAttribute('hidden');
     stopCamera();
@@ -122,16 +124,25 @@
   }
 
   // ---------- Capture flow ----------
+  function hideCountdown(){
+    if (countdownTickId !== null){
+      clearInterval(countdownTickId);
+      countdownTickId = null;
+    }
+    boothCountdown.hidden = true;
+    boothCountdown.textContent = '';
+  }
+
   function runCountdown(seconds){
     return new Promise(resolve => {
+      hideCountdown();
       let n = seconds;
       boothCountdown.hidden = false;
       boothCountdown.textContent = String(n);
-      const tick = setInterval(() => {
+      countdownTickId = setInterval(() => {
         n -= 1;
         if (n <= 0){
-          clearInterval(tick);
-          boothCountdown.hidden = true;
+          hideCountdown();
           resolve();
         } else {
           boothCountdown.textContent = String(n);
@@ -201,11 +212,13 @@
       console.error('capture error', e);
       showError('Capture failed — please try again.');
     } finally {
+      hideCountdown();
       boothCapture.disabled = false;
     }
   }
 
   function doRetake(){
+    hideCountdown();
     if (boothPreview.src) URL.revokeObjectURL(boothPreview.src);
     boothPreview.src = '';
     boothPreview.hidden = true;
@@ -219,6 +232,7 @@
 
   // ---------- Email modal ----------
   function openEmailModal(){
+    hideCountdown();
     emailModalErr.textContent = '';
     emailModal.classList.add('is-open');
     emailModal.setAttribute('aria-hidden', 'false');

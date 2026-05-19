@@ -97,43 +97,22 @@ body {
   position: relative;
 }
 
-/* ---------- Brand bar (compact, horizontal on mobile) ---------- */
+/* ---------- Brand bar (logo prominent, centered, no title text) ---------- */
 .brandbar {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 2px 0 6px;
+  padding: 6px 0 8px;
   flex: 0 0 auto;
 }
 .brandbar__logo {
-  width: 36px;
-  height: 36px;
+  width: auto;
+  height: 64px;
+  max-width: 80%;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 4px 12px rgba(240,166,192,0.35));
-}
-.brandbar__title {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
-}
-.brandbar__title-script {
-  font-family: var(--script);
-  font-size: 22px;
-  line-height: 1;
-  color: var(--rose);
-  font-style: italic;
-}
-.brandbar__title-block {
-  font-family: var(--display);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  color: var(--cream);
-  margin-top: 1px;
+  filter: drop-shadow(0 4px 14px rgba(240,166,192,0.35));
 }
 
 /* ---------- Page / panels ---------- */
@@ -846,10 +825,8 @@ body {
 /* ---------- Tablet / desktop: restore more comfortable sizing ---------- */
 @media (min-width: 640px) and (min-height: 760px) {
   .app { padding: 16px 18px calc(16px + var(--safe-bottom)); }
-  .brandbar { padding: 4px 0 10px; gap: 12px; }
-  .brandbar__logo { width: 48px; height: 48px; }
-  .brandbar__title-script { font-size: 28px; }
-  .brandbar__title-block { font-size: 14px; letter-spacing: 5px; }
+  .brandbar { padding: 10px 0 14px; }
+  .brandbar__logo { height: 88px; }
   .page { gap: 12px; }
   .hero { padding: 16px 18px 18px; gap: 14px; border-radius: 22px; }
   .hero__title { font-size: 24px; }

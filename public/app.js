@@ -13,7 +13,7 @@
   // ===============================================================
   const EVENT_HASHTAG = '#BartenuraRose';
   const EVENT_HANDLE  = '@Bartenurablue';
-  const LOGO_URL      = '/assets/bartenura-logo-pink.png';
+  const LOGO_URL      = '/assets/bartenura-logo-white.png';
 
   const $  = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
@@ -411,51 +411,33 @@
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, W, H);
 
-      // ---- Top title band: "Bartenura Rosé" ----
-      const topBandH = Math.round(H * 0.12);
+      // ---- Top brand band: centered Bartenura logo only (no typed title) ----
+      const topBandH = Math.round(H * 0.14);
       const topGrad = ctx.createLinearGradient(0, 0, 0, topBandH);
-      topGrad.addColorStop(0, 'rgba(10, 6, 8, 0.78)');
+      topGrad.addColorStop(0, 'rgba(10, 6, 8, 0.82)');
       topGrad.addColorStop(1, 'rgba(10, 6, 8, 0.0)');
       ctx.fillStyle = topGrad;
       ctx.fillRect(0, 0, W, topBandH);
 
-      // Logo on the upper-left of the title band (if loaded)
+      // Prominent centered logo
       if (logo){
-        const logoH = Math.round(H * 0.075);
+        const logoH = Math.round(H * 0.105);
         const ratio = (logo.naturalWidth || logo.width) / (logo.naturalHeight || logo.height) || 1;
-        const logoW = Math.round(logoH * ratio);
-        const logoX = Math.round(W * 0.05);
-        const logoY = Math.round(topBandH * 0.18);
+        let logoW = Math.round(logoH * ratio);
+        const maxLogoW = Math.round(W * 0.7);
+        let drawH = logoH;
+        if (logoW > maxLogoW){
+          logoW = maxLogoW;
+          drawH = Math.round(logoW / ratio);
+        }
+        const logoX = Math.round((W - logoW) / 2);
+        const logoY = Math.round((topBandH - drawH) / 2);
         ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.45)';
-        ctx.shadowBlur = Math.round(H * 0.006);
-        ctx.drawImage(logo, logoX, logoY, logoW, logoH);
+        ctx.shadowColor = 'rgba(0,0,0,0.55)';
+        ctx.shadowBlur = Math.round(H * 0.008);
+        ctx.drawImage(logo, logoX, logoY, logoW, drawH);
         ctx.restore();
       }
-
-      // Top title — script "Bartenura"
-      const titleFontSize = Math.round(H * 0.055);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = `600 italic ${titleFontSize}px "Playfair Display", "Cormorant Garamond", "Didot", "Times New Roman", serif`;
-      ctx.shadowColor = 'rgba(0,0,0,0.55)';
-      ctx.shadowBlur = Math.round(H * 0.008);
-      ctx.shadowOffsetY = 1;
-      ctx.fillStyle = '#f0a6c0';
-      ctx.fillText('Bartenura Rosé', W / 2, topBandH * 0.52);
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
-
-      // Tiny rule under the title
-      const ruleY = Math.round(topBandH * 0.86);
-      const ruleW = Math.round(W * 0.22);
-      ctx.strokeStyle = 'rgba(240, 166, 192, 0.75)';
-      ctx.lineWidth = Math.max(1, Math.round(H * 0.0015));
-      ctx.beginPath();
-      ctx.moveTo((W - ruleW) / 2, ruleY);
-      ctx.lineTo((W + ruleW) / 2, ruleY);
-      ctx.stroke();
 
       // ---- Bottom brand strip with hashtag + handle ----
       const stripH = Math.round(H * 0.10);

@@ -5,7 +5,7 @@
  * Sends the generated watercolor Bartenura Rosé portrait to the guest via Gmail SMTP.
  *
  * Email branding: Bartenura Sparkling Rosé. Painted by PowerWyze.
- * Instagram tags: @bartenurarose, @powerwyze. Event hashtag: #BartenuraRose (placeholder).
+ * Instagram tags: @Bartenurablue, @powerwyze. Event hashtag: #BartenuraRose (placeholder).
  *
  * Env (preferred — wyzer):
  *   WYZER_APP_PASSWORD    Gmail app password for wyzer@powerwyze.com
@@ -85,8 +85,8 @@ module.exports = async function handler(req, res){
 
         <div style="margin:18px 0;padding:18px 20px;background:rgba(240,166,192,0.10);border:1px solid rgba(240,166,192,0.28);border-radius:14px">
           <div style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#d9b486;margin-bottom:8px;font-weight:700">✦ Share the moment</div>
-          <p style="margin:0 0 12px 0;color:#f6e9dc;font-size:14px;line-height:1.55;font-family:Arial,sans-serif">Post your portrait on Instagram, follow <strong style="color:#f0a6c0">@bartenurarose</strong>, and tag <strong style="color:#ff9ec1">${eventHashtag}</strong> — repost &amp; we'll feature our favorites all weekend.</p>
-          <a href="https://instagram.com/bartenurarose" style="display:inline-block;background:linear-gradient(135deg,#f0a6c0 0%,#d97aa0 100%);color:#1a0c12;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:2px;padding:11px 20px;border-radius:999px;font-family:Arial,sans-serif">Follow @bartenurarose →</a>
+          <p style="margin:0 0 12px 0;color:#f6e9dc;font-size:14px;line-height:1.55;font-family:Arial,sans-serif">Post your portrait on Instagram, follow <strong style="color:#f0a6c0">@Bartenurablue</strong>, and tag <strong style="color:#ff9ec1">${eventHashtag}</strong> — repost &amp; we'll feature our favorites all weekend.</p>
+          <a href="https://instagram.com/Bartenurablue" style="display:inline-block;background:linear-gradient(135deg,#f0a6c0 0%,#d97aa0 100%);color:#1a0c12;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:2px;padding:11px 20px;border-radius:999px;font-family:Arial,sans-serif">Follow @Bartenurablue →</a>
         </div>
 
         <p style="margin:18px 0 4px 0;color:#8a7a6b;font-size:12px;font-family:Arial,sans-serif;font-style:italic">— ${fromName}</p>
@@ -105,9 +105,9 @@ module.exports = async function handler(req, res){
       text: [
         "Your watercolor portrait from the Bartenura Rosé portrait booth is attached.",
         "",
-        `Share the moment: post your portrait on Instagram, follow @bartenurarose, and tag ${eventHashtag} — we'll be reposting our favorites all weekend.`,
+        `Share the moment: post your portrait on Instagram, follow @Bartenurablue, and tag ${eventHashtag} — we'll be reposting our favorites all weekend.`,
         "",
-        "https://instagram.com/bartenurarose",
+        "https://instagram.com/Bartenurablue",
         "",
         "Sponsored by Bartenura Rosé · Painted by PowerWyze",
       ].join("\n"),

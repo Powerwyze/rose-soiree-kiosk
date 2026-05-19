@@ -12,7 +12,7 @@
   // (`[data-hashtag]` in DOM, plus the stamped portrait overlay).
   // ===============================================================
   const EVENT_HASHTAG = '#BartenuraRose';
-  const EVENT_HANDLE  = '@bartenurarose';
+  const EVENT_HANDLE  = '@Bartenurablue';
   const LOGO_URL      = '/assets/bartenura-logo-pink.png';
 
   const $  = (sel, root) => (root || document).querySelector(sel);

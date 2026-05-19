@@ -1,11 +1,11 @@
 /**
- * Dan's Rosé Soirée Photo Booth — Watercolor Portrait Restyle
+ * Bartenura Rosé Soirée Photo Booth — Watercolor Portrait Restyle
  *
- * Receives multipart/form-data with `image` (jpeg blob) + `email` (string)
- * Calls OpenAI Image Edit (gpt-image-1) with a Rosé Soirée / Hamptons watercolor prompt
- * featuring BOTH a Château Roubine pale rosé bottle AND a Bartenura Rosé bottle on the
- * table (NEITHER in the subject's hand). Adds a top "Bartenura Rosé" title and a bottom
- * brand strip with BARTENURA ROSÉ and CHÂTEAU ROUBINE wordmarks.
+ * Receives multipart/form-data with `image` (jpeg blob) + `email` (string, optional)
+ * Calls OpenAI Image Edit (gpt-image-1) with a Bartenura-first Hamptons watercolor
+ * prompt. The Bartenura Sparkling Rosé bottle is the hero; a Château Roubine pale
+ * rosé bottle may sit beside it on the table (NEITHER in the subject's hand).
+ * The client (browser) stamps the Bartenura logo + hashtag onto the final image.
  *
  * Env:
  *   OPENAI_API_KEY        (required)
@@ -21,9 +21,9 @@ const fs = require("node:fs");
 const OPENAI_URL = "https://api.openai.com/v1/images/edits";
 
 const PROMPT = [
-  "Reimagine the person in the photo as an elegant Rosé Soirée illustrated portrait in a refined Hamptons garden-party aesthetic — soft painterly watercolor and gouache illustration with delicate ink linework, gentle bleed edges, and luminous summer light. NOT a photograph. Think high-end editorial campaign artwork or a luxury wine-brand summer ad: tasteful, romantic, sun-soaked, brand-safe.",
+  "Reimagine the person in the photo as an elegant Bartenura Rosé Soirée illustrated portrait in a refined Hamptons garden-party aesthetic — soft painterly watercolor and gouache illustration with delicate ink linework, gentle bleed edges, and luminous summer light. NOT a photograph. Think high-end Bartenura editorial campaign artwork: tasteful, romantic, sun-soaked, premium, brand-safe.",
 
-  "Composition: vertical portrait poster. Reserve a clean band of soft sky/airy negative space across the TOP of the image (roughly the top 12%) for a title, and a clean horizontal band along the BOTTOM of the image (roughly the bottom 10%) for brand wordmarks. Do not crowd the top or bottom edges with busy detail — they should read as elegant headroom and footer space for typography.",
+  "Composition: vertical portrait poster. Reserve a clean band of soft sky / airy negative space across the TOP of the image (roughly the top 12%) for a Bartenura title, and a calm horizontal band along the BOTTOM of the image (roughly the bottom 10%) for a brand wordmark and hashtag. Do not crowd the top or bottom edges with busy detail — they should read as elegant headroom and footer space for typography.",
 
   "Setting: an outdoor Hamptons rosé soirée at golden hour. A round table is set with a pale linen cloth, pink and white hydrangeas with garden roses spilling across it, fresh oysters arranged on a silver tray, a softly flickering candle, dappled summer light. In the background: a classic white Hamptons mansion with verandas, sailboats or a yacht on a pale-blue bay, hedges and rose bushes, soft warm summer atmosphere.",
 
@@ -31,27 +31,25 @@ const PROMPT = [
 
   "Pose: a natural, relaxed seated or standing portrait. Hands rest naturally — folded on the lap, resting on the table, or relaxed at the subject's side. Do NOT place a wine glass, stemware, cocktail, cup, or any drinking vessel in the subject's hand. Do NOT add extra arms or extra hands. The subject must have exactly two arms and two hands, each with five fingers. The pose should look candid, refined, and editorial — like a portrait from a luxury summer magazine.",
 
-  "Place TWO wine bottles together on the table next to the subject (NEITHER in the subject's hand — both bottles stand on the table). The two bottles should sit side by side as a tasteful pair, clearly visible:",
+  "HERO BOTTLE — Bartenura Sparkling Rosé must be on the table beside the subject, clearly visible and prominent (NEVER in the subject's hand). It is a dark, almost black glass bottle with a glossy pink / rose-gold metallic foil capsule wrapping the neck and cap, and an ornate cream-white front label with a small decorative crest / coat-of-arms motif and elegant serif lettering that reads 'BARTENURA' with 'SPARKLING ROSÉ' beneath it. Treat the Bartenura bottle as the brand hero of the composition.",
 
-  "Bottle 1 — Château Roubine pale rosé: tall and slender, clear glass showing a pale peach-pink rosé wine inside, a long elegant white neck wrap / capsule, a brushed silver-grey cap with subtle rose-gold accents and an embossed crest, an embossed motif on the upper shoulder of the bottle, and a clean white front label reading 'CHÂTEAU ROUBINE' with smaller lines for 'Cru Classé', a small chateau illustration, 'PREMIUM', and 'CÔTES DE PROVENCE'. Pale rosé wine color. Brushed silver-grey cap. Unmistakably a Château Roubine Côtes de Provence rosé.",
+  "Optional secondary bottle — a Château Roubine pale rosé may also sit on the table next to the Bartenura bottle: tall and slender, clear glass showing a pale peach-pink rosé wine inside, a long elegant white neck wrap / capsule, a brushed silver-grey cap with subtle rose-gold accents and an embossed crest, and a clean white front label reading 'CHÂTEAU ROUBINE' with smaller lines for 'Cru Classé', a small chateau illustration, and 'CÔTES DE PROVENCE'. If both bottles appear, the dark Bartenura bottle with its pink foil neck should remain the visual hero and the Château Roubine should sit slightly behind or beside it as a tasteful pairing.",
 
-  "Bottle 2 — Bartenura Rosé: a dark, almost black glass bottle with a glossy pink / rose-gold metallic foil capsule wrapping the neck and cap, and an ornate cream-white front label with a small decorative crest/coat-of-arms motif and elegant serif lettering that reads 'BARTENURA' with 'ROSÉ' beneath it. The bottle is distinctly darker than the Château Roubine bottle, with a pink foil neck — the contrast between the dark Bartenura bottle and the pale Château Roubine bottle should be obvious and intentional.",
-
-  "Both bottles must remain on the table at all times. Do not substitute either bottle for a generic wine bottle. Do not blend them into one bottle. Do not place either bottle in the subject's hand.",
+  "Bottles must remain on the table at all times. Do not substitute the Bartenura bottle for a generic wine bottle. Do not place any bottle in the subject's hand.",
 
   "Title space: leave the top portion of the artwork as soft, lightly painted sky / negative space so a 'Bartenura Rosé' title can sit cleanly across the top. Do NOT paint any large competing text in the top band — only soft atmospheric color there.",
 
-  "Bottom brand strip: leave the very bottom of the artwork as a calm horizontal band suitable for two small brand wordmarks (BARTENURA ROSÉ on one side, CHÂTEAU ROUBINE on the other). Keep this footer band visually quiet so the wordmarks read cleanly.",
+  "Bottom brand strip: leave the very bottom of the artwork as a calm horizontal band suitable for a small brand wordmark and a pink hashtag. Keep this footer band visually quiet so the typography reads cleanly.",
 
-  "Color palette: blush pink, rosé peach, soft coral, ivory linen, champagne gold, sage green from hydrangea leaves, watercolor-paper warm white, with rose-gold and silver accents from the bottles and tableware. The Bartenura bottle brings deep aubergine/charcoal glass and a hot pink-gold foil accent into the palette.",
+  "Color palette: blush pink, rosé peach, soft coral, ivory linen, champagne gold, sage green from hydrangea leaves, watercolor-paper warm white, with rose-gold and silver accents from the bottles and tableware. The Bartenura bottle brings deep aubergine/charcoal glass and a hot pink / rose-gold foil accent into the palette.",
 
-  "Mood: elegant, romantic, sun-dappled Hamptons summer soirée — a true Bartenura × Château Roubine campaign moment.",
+  "Mood: elegant, romantic, sun-dappled Hamptons summer soirée — a true Bartenura Sparkling Rosé campaign moment.",
 
   "IMPORTANT: keep the person's face shape, hair style and color, skin tone, ethnicity, and overall identity clearly recognizable — but rendered in the watercolor illustration style described above (painterly, not photographic).",
 
   "CRITICAL STYLE LOCK: the face/head must match the same painterly watercolor treatment as the body and background (same brushwork, same soft pigment bleeds, same gouache linework). No realistic skin texture, no photographic pores, no photo-like lighting on the face, and no mixed-media look. The portrait must read as a single cohesive watercolor illustration from top to bottom — never a real photo head composited onto an illustrated body. Preserve likeness while simplifying details into watercolor forms: soft pigment gradients, gentle ink contour lines, and luminous illustrated shadows across the face.",
 
-  "Final anatomy check: exactly one head, two arms, two hands (each with five fingers), and no glass, cup, or bottle held in either hand. Both the Château Roubine bottle and the Bartenura Rosé bottle stay on the table.",
+  "Final anatomy check: exactly one head, two arms, two hands (each with five fingers), and no glass, cup, or bottle held in either hand. The Bartenura Sparkling Rosé bottle (and any optional Château Roubine bottle) stays on the table.",
 ].join(" ");
 
 function setCors(res){

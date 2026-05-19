@@ -1,10 +1,19 @@
 /* ================================================================
- *  Dan's Rosé Soirée · Watercolor Portrait Kiosk
- *  Portrait-mobile · Photo Booth + Email Delivery + Job Queue
+ *  Bartenura Rosé Soirée · Watercolor Portrait Kiosk
+ *  Portrait-mobile · Instagram-first · Optional email delivery
  * ================================================================ */
 
 (function(){
   'use strict';
+
+  // ===============================================================
+  // EVENT HASHTAG — placeholder; update once Kelly-Ann confirms.
+  // Change the value here only; it's auto-rendered everywhere
+  // (`[data-hashtag]` in DOM, plus the stamped portrait overlay).
+  // ===============================================================
+  const EVENT_HASHTAG = '#BartenuraRose';
+  const EVENT_HANDLE  = '@bartenurarose';
+  const LOGO_URL      = '/assets/bartenura-logo-pink.png';
 
   const $  = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
@@ -26,6 +35,9 @@
   const boothQueue      = $('#boothQueue');
   const boothBack       = $('#boothBack');
 
+  const boothWait       = $('#boothWait');
+  const boothWaitCopy   = $('#boothWaitCopy');
+
   const emailModal      = $('#emailModal');
   const emailModalInput = $('#emailModalInput');
   const emailModalErr   = $('#emailModalErr');
@@ -35,6 +47,9 @@
   const genPill         = $('#genPill');
   const resModal        = $('#resModal');
   const resModalImg     = $('#resModalImg');
+  const resModalStatus  = $('#resModalStatus');
+  const resModalEmailBtn= $('#resModalEmailBtn');
+  const resModalDone    = $('#resModalDone');
   const resModalTimer   = $('#resModalTimer');
   const toaster         = $('#toaster');
 
@@ -44,6 +59,10 @@
   let activeJobs = 0;
   let resModalTimerId = null;
   let countdownTickId = null;
+  let lastResultBlob = null;     // for optional email-after-the-fact
+
+  // Cached logo image for stamping
+  let cachedLogo = null;
 
   // ---------- Helpers ----------
   const isEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((s || '').trim());
@@ -73,6 +92,11 @@
       boothQueue.classList.remove('is-active');
       boothQueue.textContent = '';
     }
+  }
+
+  // Inject the configured hashtag everywhere it's referenced in markup
+  function applyHashtagToDom(){
+    $$('[data-hashtag]').forEach(el => { el.textContent = EVENT_HASHTAG; });
   }
 
   // ---------- Panel switching ----------
@@ -123,6 +147,24 @@
     boothCam.srcObject = null;
   }
 
+  // ---------- Wait video ----------
+  function showWaitVideo(){
+    if (!boothWait) return;
+    boothWait.hidden = false;
+    boothWaitCopy.hidden = false;
+    try {
+      boothWait.currentTime = 0;
+      const p = boothWait.play();
+      if (p && typeof p.catch === 'function') p.catch(()=>{});
+    } catch (_) {}
+  }
+  function hideWaitVideo(){
+    if (!boothWait) return;
+    try { boothWait.pause(); } catch (_) {}
+    boothWait.hidden = true;
+    boothWaitCopy.hidden = true;
+  }
+
   // ---------- Capture flow ----------
   function hideCountdown(){
     if (countdownTickId !== null){
@@ -160,7 +202,6 @@
     const v = boothCam;
     if (!v.videoWidth || !v.videoHeight) throw new Error('Camera not ready');
 
-    // Target 9:16 crop centered on the video frame
     const srcW = v.videoWidth, srcH = v.videoHeight;
     const targetAspect = 9 / 16;
     let cropW, cropH;
@@ -174,14 +215,12 @@
     const sx = Math.round((srcW - cropW) / 2);
     const sy = Math.round((srcH - cropH) / 2);
 
-    // Output up to 1080x1920 (downscale only)
     const outW = Math.min(1080, cropW);
     const outH = Math.round(outW * 16 / 9);
 
     boothCanvas.width  = outW;
     boothCanvas.height = outH;
     const ctx = boothCanvas.getContext('2d');
-    // Mirror to match the preview
     ctx.save();
     ctx.translate(outW, 0);
     ctx.scale(-1, 1);
@@ -200,7 +239,6 @@
       await runCountdown(5);
       flash();
       capturedBlob = await captureFrame();
-      // Show preview
       const url = URL.createObjectURL(capturedBlob);
       boothPreview.src = url;
       boothPreview.hidden = false;
@@ -219,6 +257,7 @@
 
   function doRetake(){
     hideCountdown();
+    hideWaitVideo();
     if (boothPreview.src) URL.revokeObjectURL(boothPreview.src);
     boothPreview.src = '';
     boothPreview.hidden = true;
@@ -230,7 +269,7 @@
     showError('');
   }
 
-  // ---------- Email modal ----------
+  // ---------- Email modal (optional, post-result) ----------
   function openEmailModal(){
     hideCountdown();
     emailModalErr.textContent = '';
@@ -248,8 +287,9 @@
     resModalImg.src = imageUrl;
     resModal.classList.add('is-open');
     resModal.setAttribute('aria-hidden', 'false');
+    resModalStatus.hidden = true;
 
-    let remaining = 15;
+    let remaining = 30; // longer so guests have time to scan
     resModalTimer.textContent = String(remaining);
     clearInterval(resModalTimerId);
     resModalTimerId = setInterval(() => {
@@ -267,20 +307,22 @@
       URL.revokeObjectURL(resModalImg.src);
     }
     resModalImg.src = '';
+    lastResultBlob = null;
   }
-  resModal.addEventListener('click', closeResultModal);
 
   // ---------- Generation job ----------
-  async function runGenerationJob(blob, email){
+  async function runGenerationJob(blob){
     activeJobs += 1;
     updateQueueIndicator();
     genPill.classList.add('is-active');
     genPill.setAttribute('aria-hidden', 'false');
+    showWaitVideo();
 
     try {
       const fd = new FormData();
       fd.append('image', blob, 'capture.jpg');
-      fd.append('email', email);
+      // email is intentionally optional now; pass empty so server is happy
+      fd.append('email', '');
 
       const res = await fetch('/api/banana', { method: 'POST', body: fd });
       if (!res.ok){
@@ -292,30 +334,10 @@
       const imageBlob = await stampBranding(rawBlob);
       const imageUrl  = URL.createObjectURL(imageBlob);
 
-      // Send to email
-      const b64 = await blobToBase64(imageBlob);
-      const sendRes = await fetch('/api/send-photo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          filename: 'rose-soiree-portrait.png',
-          mimeType: 'image/png',
-          imageBase64: b64,
-        }),
-      });
-
-      const sentOk = sendRes.ok;
-      if (!sentOk){
-        const errText = await sendRes.text().catch(() => '');
-        console.error('send-photo error', sendRes.status, errText);
-      }
-
+      lastResultBlob = imageBlob;
       openResultModal(imageUrl);
       toast(
-        sentOk
-          ? `✦ Portrait sent to <strong>${escapeHtml(email)}</strong>`
-          : `Portrait painted — but email send to <strong>${escapeHtml(email)}</strong> failed. Try again.`,
+        `✦ Portrait painted — scan & tag ${EVENT_HASHTAG} on Instagram`,
         6500
       );
     } catch (e){
@@ -328,14 +350,36 @@
       if (activeJobs === 0){
         genPill.classList.remove('is-active');
         genPill.setAttribute('aria-hidden', 'true');
+        hideWaitVideo();
       }
     }
   }
 
-  // ---------- Branding overlay ----------
-  // Stamps a top "Bartenura Rosé" title and a bottom brand strip with
-  // BARTENURA ROSÉ + CHÂTEAU ROUBINE wordmarks onto the generated portrait,
-  // so the elements are reliable even if the image model omits text.
+  async function sendPortraitEmail(email, imageBlob){
+    const b64 = await blobToBase64(imageBlob);
+    const sendRes = await fetch('/api/send-photo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        filename: 'bartenura-rose-portrait.png',
+        mimeType: 'image/png',
+        imageBase64: b64,
+      }),
+    });
+    return sendRes.ok;
+  }
+
+  // ---------- Branding overlay on generated image ----------
+  function loadImage(src){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
   function loadImageFromBlob(blob){
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(blob);
@@ -346,9 +390,19 @@
     });
   }
 
+  async function getLogo(){
+    if (cachedLogo) return cachedLogo;
+    try {
+      cachedLogo = await loadImage(LOGO_URL);
+      return cachedLogo;
+    } catch (_) {
+      return null;
+    }
+  }
+
   async function stampBranding(blob){
     try {
-      const img = await loadImageFromBlob(blob);
+      const [img, logo] = await Promise.all([loadImageFromBlob(blob), getLogo()]);
       const W = img.naturalWidth || img.width;
       const H = img.naturalHeight || img.height;
       const canvas = document.createElement('canvas');
@@ -358,80 +412,91 @@
       ctx.drawImage(img, 0, 0, W, H);
 
       // ---- Top title band: "Bartenura Rosé" ----
-      const topBandH = Math.round(H * 0.11);
+      const topBandH = Math.round(H * 0.12);
       const topGrad = ctx.createLinearGradient(0, 0, 0, topBandH);
-      topGrad.addColorStop(0, 'rgba(255, 248, 250, 0.92)');
-      topGrad.addColorStop(1, 'rgba(255, 248, 250, 0.0)');
+      topGrad.addColorStop(0, 'rgba(10, 6, 8, 0.78)');
+      topGrad.addColorStop(1, 'rgba(10, 6, 8, 0.0)');
       ctx.fillStyle = topGrad;
       ctx.fillRect(0, 0, W, topBandH);
 
-      const titleFontSize = Math.round(H * 0.058);
+      // Logo on the upper-left of the title band (if loaded)
+      if (logo){
+        const logoH = Math.round(H * 0.075);
+        const ratio = (logo.naturalWidth || logo.width) / (logo.naturalHeight || logo.height) || 1;
+        const logoW = Math.round(logoH * ratio);
+        const logoX = Math.round(W * 0.05);
+        const logoY = Math.round(topBandH * 0.18);
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.45)';
+        ctx.shadowBlur = Math.round(H * 0.006);
+        ctx.drawImage(logo, logoX, logoY, logoW, logoH);
+        ctx.restore();
+      }
+
+      // Top title — script "Bartenura"
+      const titleFontSize = Math.round(H * 0.055);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.font = `600 italic ${titleFontSize}px "Playfair Display", "Cormorant Garamond", "Didot", "Times New Roman", serif`;
-      // soft shadow for legibility
-      ctx.shadowColor = 'rgba(120, 40, 70, 0.18)';
-      ctx.shadowBlur = Math.round(H * 0.006);
+      ctx.shadowColor = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur = Math.round(H * 0.008);
       ctx.shadowOffsetY = 1;
-      ctx.fillStyle = '#7a2a47'; // deep rosé
-      ctx.fillText('Bartenura Rosé', W / 2, topBandH * 0.55);
+      ctx.fillStyle = '#f0a6c0';
+      ctx.fillText('Bartenura Rosé', W / 2, topBandH * 0.52);
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
       ctx.shadowOffsetY = 0;
 
-      // tiny decorative rule under the title
-      const ruleY = Math.round(topBandH * 0.92);
+      // Tiny rule under the title
+      const ruleY = Math.round(topBandH * 0.86);
       const ruleW = Math.round(W * 0.22);
-      ctx.strokeStyle = 'rgba(122, 42, 71, 0.55)';
+      ctx.strokeStyle = 'rgba(240, 166, 192, 0.75)';
       ctx.lineWidth = Math.max(1, Math.round(H * 0.0015));
       ctx.beginPath();
       ctx.moveTo((W - ruleW) / 2, ruleY);
       ctx.lineTo((W + ruleW) / 2, ruleY);
       ctx.stroke();
 
-      // ---- Bottom brand strip ----
-      const stripH = Math.round(H * 0.085);
+      // ---- Bottom brand strip with hashtag + handle ----
+      const stripH = Math.round(H * 0.10);
       const stripY = H - stripH;
-      // subtle ivory bar with a thin rose-gold rule on top
-      ctx.fillStyle = 'rgba(252, 246, 240, 0.94)';
+      const stripGrad = ctx.createLinearGradient(0, stripY, 0, H);
+      stripGrad.addColorStop(0, 'rgba(10, 6, 8, 0.0)');
+      stripGrad.addColorStop(0.45, 'rgba(10, 6, 8, 0.75)');
+      stripGrad.addColorStop(1, 'rgba(10, 6, 8, 0.92)');
+      ctx.fillStyle = stripGrad;
       ctx.fillRect(0, stripY, W, stripH);
-      ctx.strokeStyle = 'rgba(180, 130, 110, 0.55)';
-      ctx.lineWidth = Math.max(1, Math.round(H * 0.0018));
+
+      // Thin rose-gold rule on top of the strip
+      ctx.strokeStyle = 'rgba(217, 180, 134, 0.55)';
+      ctx.lineWidth = Math.max(1, Math.round(H * 0.0015));
       ctx.beginPath();
-      ctx.moveTo(0, stripY);
-      ctx.lineTo(W, stripY);
+      ctx.moveTo(0, stripY + Math.round(stripH * 0.18));
+      ctx.lineTo(W, stripY + Math.round(stripH * 0.18));
       ctx.stroke();
 
-      const brandFont = Math.round(H * 0.024);
-      const tagFont   = Math.round(H * 0.013);
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#3a1a26';
+      const midY = stripY + stripH * 0.62;
+      const brandFont = Math.round(H * 0.028);
+      const tagFont   = Math.round(H * 0.016);
 
       // Left wordmark: BARTENURA ROSÉ
-      const leftX = Math.round(W * 0.255);
-      const midY  = stripY + stripH / 2;
-      ctx.textAlign = 'center';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#f6e9dc';
       ctx.font = `700 ${brandFont}px "Trajan Pro", "Cinzel", "Cormorant Garamond", "Times New Roman", serif`;
-      ctx.fillText('BARTENURA', leftX, midY - brandFont * 0.5);
-      ctx.font = `400 italic ${Math.round(brandFont * 0.9)}px "Playfair Display", "Cormorant Garamond", "Didot", serif`;
-      ctx.fillStyle = '#7a2a47';
-      ctx.fillText('Rosé', leftX, midY + brandFont * 0.55);
+      ctx.fillText('BARTENURA', Math.round(W * 0.05), midY - brandFont * 0.45);
+      ctx.font = `400 italic ${Math.round(brandFont * 0.95)}px "Playfair Display", "Cormorant Garamond", "Didot", serif`;
+      ctx.fillStyle = '#f0a6c0';
+      ctx.fillText('Sparkling Rosé', Math.round(W * 0.05), midY + brandFont * 0.55);
 
-      // Center divider dot
-      ctx.fillStyle = 'rgba(58, 26, 38, 0.55)';
-      const dotR = Math.max(2, Math.round(H * 0.003));
-      ctx.beginPath();
-      ctx.arc(W / 2, midY, dotR, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Right wordmark: CHÂTEAU ROUBINE
-      const rightX = Math.round(W * 0.745);
-      ctx.fillStyle = '#3a1a26';
-      ctx.font = `700 ${brandFont}px "Trajan Pro", "Cinzel", "Cormorant Garamond", "Times New Roman", serif`;
-      ctx.fillText('CHÂTEAU ROUBINE', rightX, midY - brandFont * 0.5);
-      ctx.font = `400 ${tagFont}px "Cormorant Garamond", "Times New Roman", serif`;
-      ctx.fillStyle = 'rgba(58, 26, 38, 0.75)';
-      ctx.fillText('CÔTES DE PROVENCE', rightX, midY + brandFont * 0.6);
+      // Right side: hashtag + handle
+      ctx.textAlign = 'right';
+      ctx.font = `700 ${brandFont}px "Inter", "Helvetica Neue", Arial, sans-serif`;
+      ctx.fillStyle = '#ff9ec1';
+      ctx.fillText(EVENT_HASHTAG, Math.round(W * 0.95), midY - brandFont * 0.45);
+      ctx.font = `400 ${tagFont}px "Inter", "Helvetica Neue", Arial, sans-serif`;
+      ctx.fillStyle = 'rgba(246, 233, 220, 0.85)';
+      ctx.fillText(EVENT_HANDLE + ' · powerwyze.com', Math.round(W * 0.95), midY + brandFont * 0.6);
 
       const stamped = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
       return stamped || blob;
@@ -470,37 +535,65 @@
   boothRetake .addEventListener('click', doRetake);
   boothGenerate.addEventListener('click', () => {
     if (!capturedBlob){ showError('Please take a photo first.'); return; }
-    openEmailModal();
+    // Instagram-first: skip the email gate, kick off generation immediately.
+    const blob = capturedBlob;
+    capturedBlob = null;
+    runGenerationJob(blob);
+    doRetake();
   });
 
+  // Email-after-the-fact, opened from the result modal
+  resModalEmailBtn.addEventListener('click', () => {
+    if (!lastResultBlob){ toast('Portrait not ready yet — try again in a moment.'); return; }
+    openEmailModal();
+  });
+  resModalDone.addEventListener('click', closeResultModal);
+
   emailModalCancel.addEventListener('click', closeEmailModal);
-  emailModalOk.addEventListener('click', () => {
+  emailModalOk.addEventListener('click', async () => {
     const email = (emailModalInput.value || '').trim();
     if (!isEmail(email)){
       emailModalErr.textContent = 'Please enter a valid email address.';
       return;
     }
     emailModalErr.textContent = '';
-    closeEmailModal();
-
-    // Kick off background job
-    const blob = capturedBlob;
-    capturedBlob = null;
-    runGenerationJob(blob, email);
-
-    // Reset booth so the next guest can shoot
-    doRetake();
+    emailModalOk.disabled = true;
+    try {
+      const ok = await sendPortraitEmail(email, lastResultBlob);
+      closeEmailModal();
+      if (ok){
+        resModalStatus.hidden = false;
+        resModalStatus.textContent = `✓ Sent to ${email}`;
+        toast(`✦ Portrait sent to <strong>${escapeHtml(email)}</strong>`, 5500);
+      } else {
+        toast(`Email send failed — please try again.`, 6000);
+      }
+    } catch (e){
+      console.error('email error', e);
+      toast(`Email error: ${escapeHtml(String(e.message || e))}`, 6000);
+    } finally {
+      emailModalOk.disabled = false;
+      emailModalInput.value = '';
+    }
   });
   emailModalInput.addEventListener('keyup', (e) => {
     if (e.key === 'Enter') emailModalOk.click();
   });
 
-  // Pause camera when tab is hidden to save power
+  // Pause camera when tab is hidden
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stopCamera();
-    else if (!heroPanel.hasAttribute('hidden')) {} else startCamera();
+    if (document.hidden) {
+      stopCamera();
+      try { if (boothWait) boothWait.pause(); } catch (_) {}
+    } else if (!boothPanel.hasAttribute('hidden')) {
+      startCamera();
+      if (boothWait && !boothWait.hidden) { try { boothWait.play(); } catch (_) {} }
+    }
   });
 
   // ---------- Init ----------
+  applyHashtagToDom();
+  // Preload logo for stamping
+  getLogo().catch(()=>{});
   showHero();
 })();

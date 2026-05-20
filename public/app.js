@@ -102,6 +102,7 @@
   // ---------- Panel switching ----------
   function showHero(){
     hideCountdown();
+    hideWaitVideo();
     boothPanel.setAttribute('hidden', '');
     heroPanel.removeAttribute('hidden');
     stopCamera();
@@ -148,14 +149,23 @@
   }
 
   // ---------- Wait video ----------
+  // While the wait video is visible we also force the live camera + captured
+  // preview off-screen so nothing can sit on top of the rose loop.
   function showWaitVideo(){
     if (!boothWait) return;
+    boothCam.hidden = true;
+    boothPreview.hidden = true;
     boothWait.hidden = false;
     boothWaitCopy.hidden = false;
     try {
       boothWait.currentTime = 0;
       const p = boothWait.play();
-      if (p && typeof p.catch === 'function') p.catch(()=>{});
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => {
+          // Autoplay failed (rare with muted+playsinline). The poster copy
+          // overlay remains visible so guests still see the wait state.
+        });
+      }
     } catch (_) {}
   }
   function hideWaitVideo(){
@@ -163,6 +173,16 @@
     try { boothWait.pause(); } catch (_) {}
     boothWait.hidden = true;
     boothWaitCopy.hidden = true;
+    // Restore the live camera viewfinder + capture button so the next guest
+    // can step up immediately. Only do this if we aren't currently showing a
+    // captured still (preview attribute present means user is mid-flow).
+    const previewSrc = boothPreview.getAttribute('src');
+    if (!previewSrc){
+      boothCam.hidden = false;
+      boothCapture.hidden = false;
+      boothRetake.hidden = true;
+      boothGenerate.hidden = true;
+    }
   }
 
   // ---------- Capture flow ----------
@@ -520,8 +540,16 @@
     // Instagram-first: skip the email gate, kick off generation immediately.
     const blob = capturedBlob;
     capturedBlob = null;
+    // Reset capture-related UI WITHOUT hiding the wait video or flipping the
+    // camera back on. showWaitVideo() (called inside runGenerationJob) is what
+    // governs visibility of cam/preview/wait while a job is in flight.
+    if (boothPreview.src) URL.revokeObjectURL(boothPreview.src);
+    boothPreview.src = '';
+    boothCapture.hidden = true;
+    boothRetake.hidden = true;
+    boothGenerate.hidden = true;
+    showError('');
     runGenerationJob(blob);
-    doRetake();
   });
 
   // Email-after-the-fact, opened from the result modal

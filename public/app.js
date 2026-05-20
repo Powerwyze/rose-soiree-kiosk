@@ -420,9 +420,14 @@
     }
   }
 
+  // The generated artwork already contains the BARTENURA ROSÉ headline and the
+  // Bartenura / Château Roubine bottom wordmarks (per the reference scene), so
+  // we only add a small, unobtrusive corner pill with the IG handle + hashtag
+  // — no top-band logo, no full-width bottom strip — to avoid covering or
+  // duplicating the painted typography and the two bottles in the foreground.
   async function stampBranding(blob){
     try {
-      const [img, logo] = await Promise.all([loadImageFromBlob(blob), getLogo()]);
+      const img = await loadImageFromBlob(blob);
       const W = img.naturalWidth || img.width;
       const H = img.naturalHeight || img.height;
       const canvas = document.createElement('canvas');
@@ -431,74 +436,48 @@
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, W, H);
 
-      // ---- Top brand band: centered Bartenura logo only (no typed title) ----
-      const topBandH = Math.round(H * 0.14);
-      const topGrad = ctx.createLinearGradient(0, 0, 0, topBandH);
-      topGrad.addColorStop(0, 'rgba(10, 6, 8, 0.82)');
-      topGrad.addColorStop(1, 'rgba(10, 6, 8, 0.0)');
-      ctx.fillStyle = topGrad;
-      ctx.fillRect(0, 0, W, topBandH);
+      // Small pill in the lower-right corner: @handle + #hashtag
+      const pad = Math.round(H * 0.012);
+      const fontMain = Math.round(H * 0.016);
+      const fontSub  = Math.round(H * 0.013);
 
-      // Prominent centered logo
-      if (logo){
-        const logoH = Math.round(H * 0.105);
-        const ratio = (logo.naturalWidth || logo.width) / (logo.naturalHeight || logo.height) || 1;
-        let logoW = Math.round(logoH * ratio);
-        const maxLogoW = Math.round(W * 0.7);
-        let drawH = logoH;
-        if (logoW > maxLogoW){
-          logoW = maxLogoW;
-          drawH = Math.round(logoW / ratio);
-        }
-        const logoX = Math.round((W - logoW) / 2);
-        const logoY = Math.round((topBandH - drawH) / 2);
-        ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.55)';
-        ctx.shadowBlur = Math.round(H * 0.008);
-        ctx.drawImage(logo, logoX, logoY, logoW, drawH);
-        ctx.restore();
-      }
+      ctx.font = `700 ${fontMain}px "Inter", "Helvetica Neue", Arial, sans-serif`;
+      const handleText = EVENT_HANDLE;
+      const tagText    = EVENT_HASHTAG;
+      const handleW = ctx.measureText(handleText).width;
+      ctx.font = `600 ${fontSub}px "Inter", "Helvetica Neue", Arial, sans-serif`;
+      const tagW = ctx.measureText(tagText).width;
 
-      // ---- Bottom brand strip with hashtag + handle ----
-      const stripH = Math.round(H * 0.10);
-      const stripY = H - stripH;
-      const stripGrad = ctx.createLinearGradient(0, stripY, 0, H);
-      stripGrad.addColorStop(0, 'rgba(10, 6, 8, 0.0)');
-      stripGrad.addColorStop(0.45, 'rgba(10, 6, 8, 0.75)');
-      stripGrad.addColorStop(1, 'rgba(10, 6, 8, 0.92)');
-      ctx.fillStyle = stripGrad;
-      ctx.fillRect(0, stripY, W, stripH);
+      const pillW = Math.round(Math.max(handleW, tagW) + pad * 2.6);
+      const pillH = Math.round(fontMain + fontSub + pad * 2.2);
+      const pillX = W - pillW - Math.round(W * 0.035);
+      const pillY = H - pillH - Math.round(H * 0.028);
+      const r = Math.round(pillH * 0.32);
 
-      // Thin rose-gold rule on top of the strip
-      ctx.strokeStyle = 'rgba(217, 180, 134, 0.55)';
-      ctx.lineWidth = Math.max(1, Math.round(H * 0.0015));
+      ctx.save();
+      ctx.fillStyle = 'rgba(10, 6, 8, 0.62)';
+      ctx.strokeStyle = 'rgba(240, 166, 192, 0.55)';
+      ctx.lineWidth = Math.max(1, Math.round(H * 0.0012));
       ctx.beginPath();
-      ctx.moveTo(0, stripY + Math.round(stripH * 0.18));
-      ctx.lineTo(W, stripY + Math.round(stripH * 0.18));
+      ctx.moveTo(pillX + r, pillY);
+      ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillH, r);
+      ctx.arcTo(pillX + pillW, pillY + pillH, pillX, pillY + pillH, r);
+      ctx.arcTo(pillX, pillY + pillH, pillX, pillY, r);
+      ctx.arcTo(pillX, pillY, pillX + pillW, pillY, r);
+      ctx.closePath();
+      ctx.fill();
       ctx.stroke();
+      ctx.restore();
 
-      const midY = stripY + stripH * 0.62;
-      const brandFont = Math.round(H * 0.028);
-      const tagFont   = Math.round(H * 0.016);
-
-      // Left wordmark: BARTENURA ROSÉ
-      ctx.textAlign = 'left';
+      ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      const cx = pillX + pillW / 2;
+      ctx.font = `700 ${fontMain}px "Inter", "Helvetica Neue", Arial, sans-serif`;
       ctx.fillStyle = '#f6e9dc';
-      ctx.font = `700 ${brandFont}px "Trajan Pro", "Cinzel", "Cormorant Garamond", "Times New Roman", serif`;
-      ctx.fillText('BARTENURA', Math.round(W * 0.05), midY - brandFont * 0.45);
-      ctx.font = `400 italic ${Math.round(brandFont * 0.95)}px "Playfair Display", "Cormorant Garamond", "Didot", serif`;
-      ctx.fillStyle = '#f0a6c0';
-      ctx.fillText('Sparkling Rosé', Math.round(W * 0.05), midY + brandFont * 0.55);
-
-      // Right side: hashtag + handle
-      ctx.textAlign = 'right';
-      ctx.font = `700 ${brandFont}px "Inter", "Helvetica Neue", Arial, sans-serif`;
+      ctx.fillText(handleText, cx, pillY + pad + fontMain * 0.55);
+      ctx.font = `600 ${fontSub}px "Inter", "Helvetica Neue", Arial, sans-serif`;
       ctx.fillStyle = '#ff9ec1';
-      ctx.fillText(EVENT_HASHTAG, Math.round(W * 0.95), midY - brandFont * 0.45);
-      ctx.font = `400 ${tagFont}px "Inter", "Helvetica Neue", Arial, sans-serif`;
-      ctx.fillStyle = 'rgba(246, 233, 220, 0.85)';
-      ctx.fillText(EVENT_HANDLE + ' · powerwyze.com', Math.round(W * 0.95), midY + brandFont * 0.6);
+      ctx.fillText(tagText, cx, pillY + pad + fontMain + fontSub * 0.65);
 
       const stamped = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
       return stamped || blob;

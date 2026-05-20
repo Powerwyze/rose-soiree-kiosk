@@ -1,0 +1,26 @@
+{
+  "name": "Bartenura Rosé Soirée · Portrait Booth",
+  "short_name": "Bartenura Booth",
+  "description": "Bartenura Rosé Soirée watercolor portrait booth kiosk.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#0a0608",
+  "theme_color": "#0a0608",
+  "icons": [
+    {
+      "src": "/assets/bartenura-logo-pink.png",
+      "sizes": "2651x1337",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/bartenura-logo-white.png",
+      "sizes": "663x338",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

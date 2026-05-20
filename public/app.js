@@ -347,6 +347,7 @@
     genPill.classList.add('is-active');
     genPill.setAttribute('aria-hidden', 'false');
     showWaitVideo();
+    openEmailModal();
 
     try {
       const fd = new FormData();

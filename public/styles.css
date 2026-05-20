@@ -259,7 +259,7 @@ body {
 }
 .hero__how li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   flex: 1;
   font-size: 10px;
@@ -270,6 +270,8 @@ body {
   border-radius: 10px;
   padding: 6px 8px;
   min-width: 0;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
 }
 .hero__how li span {
   flex: 0 0 18px;

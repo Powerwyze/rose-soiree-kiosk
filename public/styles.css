@@ -735,6 +735,26 @@ body {
 .genpill__text strong { color: var(--rose); font-weight: 700; }
 .genpill__text span { color: var(--rose-pink); font-weight: 700; }
 
+/* Floating brand logo above spinner (shown only while generating) */
+.genpill-logo {
+  position: fixed;
+  left: 50%;
+  bottom: calc(72px + var(--safe-bottom));
+  transform: translateX(-50%);
+  z-index: 49;
+  display: none;
+  pointer-events: none;
+}
+.genpill-logo img {
+  height: 38px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.35));
+}
+.genpill.is-active + .genpill-logo {
+  display: block;
+}
+
 /* ---------- Toaster ---------- */
 .toaster {
   position: fixed;

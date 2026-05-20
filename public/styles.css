@@ -90,7 +90,7 @@ body {
   background:
     radial-gradient(ellipse at 50% 0%, rgba(240,166,192,0.12) 0%, transparent 55%),
     radial-gradient(ellipse at 50% 100%, rgba(217,122,160,0.14) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(10,6,8,0.30) 0%, rgba(10,6,8,0.18) 50%, rgba(10,6,8,0.38) 100%);
+    linear-gradient(180deg, rgba(10,6,8,0.30) 0%, rgba(10,6,8,0.30) 50%, rgba(10,6,8,0.30) 100%);
 }
 
 /* ---------- Background washes (sit on top of video for accent + readability) ---------- */

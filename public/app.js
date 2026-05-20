@@ -292,14 +292,24 @@
   // ---------- Email modal (optional, post-result) ----------
   function openEmailModal(){
     hideCountdown();
+    // Freeze the result-modal auto-close timer so lastResultBlob isn't cleared
+    // out from under us while the guest is typing their email.
+    if (resModalTimerId){
+      clearInterval(resModalTimerId);
+      resModalTimerId = null;
+    }
     emailModalErr.textContent = '';
+    emailModalInput.value = '';
+    emailModalOk.disabled = false;
+    emailModalOk.textContent = 'Send';
     emailModal.classList.add('is-open');
     emailModal.setAttribute('aria-hidden', 'false');
-    setTimeout(() => emailModalInput.focus(), 80);
+    setTimeout(() => { try { emailModalInput.focus(); } catch (_) {} }, 80);
   }
   function closeEmailModal(){
     emailModal.classList.remove('is-open');
     emailModal.setAttribute('aria-hidden', 'true');
+    emailModalErr.textContent = '';
   }
 
   // ---------- Result modal ----------
@@ -376,6 +386,7 @@
   }
 
   async function sendPortraitEmail(email, imageBlob){
+    if (!imageBlob) return { ok: false, error: 'No portrait image available' };
     const b64 = await blobToBase64(imageBlob);
     const sendRes = await fetch('/api/send-photo', {
       method: 'POST',
@@ -387,7 +398,9 @@
         imageBase64: b64,
       }),
     });
-    return sendRes.ok;
+    if (sendRes.ok) return { ok: true };
+    const errText = await sendRes.text().catch(() => '');
+    return { ok: false, error: errText || `Server returned ${sendRes.status}` };
   }
 
   // ---------- Branding overlay on generated image ----------
@@ -533,7 +546,10 @@
 
   // Email-after-the-fact, opened from the result modal
   resModalEmailBtn.addEventListener('click', () => {
-    if (!lastResultBlob){ toast('Portrait not ready yet — try again in a moment.'); return; }
+    if (!lastResultBlob){
+      toast('Portrait not ready yet — try again in a moment.', 4500);
+      return;
+    }
     openEmailModal();
   });
   resModalDone.addEventListener('click', closeResultModal);
@@ -545,44 +561,72 @@
       emailModalErr.textContent = 'Please enter a valid email address.';
       return;
     }
+    if (!lastResultBlob){
+      emailModalErr.textContent = 'Portrait not ready — please try again from the booth.';
+      return;
+    }
     emailModalErr.textContent = '';
     emailModalOk.disabled = true;
+    emailModalOk.textContent = 'Sending…';
     try {
-      const ok = await sendPortraitEmail(email, lastResultBlob);
-      closeEmailModal();
-      if (ok){
+      const result = await sendPortraitEmail(email, lastResultBlob);
+      if (result.ok){
+        closeEmailModal();
         resModalStatus.hidden = false;
         resModalStatus.textContent = `✓ Sent to ${email}`;
         toast(`✦ Portrait sent to <strong>${escapeHtml(email)}</strong>`, 5500);
       } else {
-        toast(`Email send failed — please try again.`, 6000);
+        emailModalErr.textContent = result.error || 'Send failed — please try again.';
+        toast(`Email send failed — please try again.`, 5000);
       }
     } catch (e){
       console.error('email error', e);
+      emailModalErr.textContent = String(e.message || e);
       toast(`Email error: ${escapeHtml(String(e.message || e))}`, 6000);
     } finally {
       emailModalOk.disabled = false;
-      emailModalInput.value = '';
+      emailModalOk.textContent = 'Send';
     }
   });
   emailModalInput.addEventListener('keyup', (e) => {
     if (e.key === 'Enter') emailModalOk.click();
   });
 
-  // Pause camera when tab is hidden
+  // ---------- Background video (every page) ----------
+  const bgVideo = $('#bgVideo');
+  function nudgeBgVideo(){
+    if (!bgVideo) return;
+    try {
+      const p = bgVideo.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (_) {}
+  }
+
+  // Pause camera when tab is hidden; resume the background loop on focus
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       stopCamera();
       try { if (boothWait) boothWait.pause(); } catch (_) {}
-    } else if (!boothPanel.hasAttribute('hidden')) {
-      startCamera();
-      if (boothWait && !boothWait.hidden) { try { boothWait.play(); } catch (_) {} }
+      try { if (bgVideo) bgVideo.pause(); } catch (_) {}
+    } else {
+      nudgeBgVideo();
+      if (!boothPanel.hasAttribute('hidden')) {
+        startCamera();
+        if (boothWait && !boothWait.hidden) { try { boothWait.play(); } catch (_) {} }
+      }
     }
+  });
+  window.addEventListener('focus', nudgeBgVideo);
+  window.addEventListener('pageshow', nudgeBgVideo);
+  // Browsers that block autoplay will start the loop on the first user gesture.
+  ['click', 'touchstart', 'keydown'].forEach(ev => {
+    window.addEventListener(ev, nudgeBgVideo, { once: false, passive: true });
   });
 
   // ---------- Init ----------
   applyHashtagToDom();
   // Preload logo for stamping
   getLogo().catch(()=>{});
+  nudgeBgVideo();
   showHero();
 })();

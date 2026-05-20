@@ -21,6 +21,12 @@
 </head>
 <body class="kiosk-portrait">
 
+  <video class="bg-video" id="bgVideo"
+         src="/assets/kiosk-background-loop.mp4"
+         muted loop playsinline autoplay preload="auto"
+         aria-hidden="true" tabindex="-1"></video>
+  <div class="bg-video__tint" aria-hidden="true"></div>
+
   <div class="bg" aria-hidden="true"></div>
   <div class="bg__wash" aria-hidden="true"></div>
   <div class="bg__grain" aria-hidden="true"></div>

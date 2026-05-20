@@ -65,19 +65,45 @@ body {
   max-width: 100vw;
 }
 
-/* ---------- Background washes ---------- */
+/* ---------- Looping background video (every page) ---------- */
+.bg-video {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100svh;
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: -10;
+  pointer-events: none;
+  background: var(--bg-ink);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.bg-video__tint {
+  position: fixed; inset: 0;
+  z-index: -9;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(240,166,192,0.18) 0%, transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(217,122,160,0.20) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(10,6,8,0.55) 0%, rgba(10,6,8,0.40) 50%, rgba(10,6,8,0.62) 100%);
+}
+
+/* ---------- Background washes (sit on top of video for accent + readability) ---------- */
 .bg {
   position: fixed; inset: 0; z-index: -4;
+  pointer-events: none;
   background:
-    radial-gradient(ellipse at 20% 8%, rgba(240,166,192,0.18) 0%, transparent 40%),
-    radial-gradient(ellipse at 82% 18%, rgba(217,180,134,0.16) 0%, transparent 45%),
-    radial-gradient(ellipse at 50% 100%, rgba(217,122,160,0.16) 0%, transparent 55%),
-    linear-gradient(180deg, #0a0608 0%, #14090f 55%, #0a0608 100%);
+    radial-gradient(ellipse at 20% 8%, rgba(240,166,192,0.14) 0%, transparent 40%),
+    radial-gradient(ellipse at 82% 18%, rgba(217,180,134,0.12) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 100%, rgba(217,122,160,0.14) 0%, transparent 55%);
 }
 .bg__wash {
   position: fixed; inset: 0; z-index: -3;
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.35;
   background-image:
     radial-gradient(circle at 18% 22%, rgba(240,166,192,0.22) 0%, transparent 28%),
     radial-gradient(circle at 76% 28%, rgba(217,180,134,0.18) 0%, transparent 30%),

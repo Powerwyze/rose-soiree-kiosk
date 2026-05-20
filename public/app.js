@@ -602,6 +602,33 @@
     } catch (_) {}
   }
 
+  // Defensive looping: some mobile browsers (iOS Safari in PWA, Android
+  // Chrome with data-saver) drop the native `loop` attribute and the video
+  // stalls at its last frame. Reseed on `ended`, and on unexpected pause
+  // while the tab is visible.
+  function reseed(video){
+    if (!video) return;
+    try {
+      video.currentTime = 0;
+      const p = video.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch (_) {}
+  }
+  if (bgVideo){
+    bgVideo.addEventListener('ended', () => reseed(bgVideo));
+    bgVideo.addEventListener('pause', () => {
+      if (!document.hidden && !bgVideo.ended) {
+        const p = bgVideo.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      }
+    });
+  }
+  if (boothWait){
+    boothWait.addEventListener('ended', () => {
+      if (!boothWait.hidden) reseed(boothWait);
+    });
+  }
+
   // Pause camera when tab is hidden; resume the background loop on focus
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -612,7 +639,7 @@
       nudgeBgVideo();
       if (!boothPanel.hasAttribute('hidden')) {
         startCamera();
-        if (boothWait && !boothWait.hidden) { try { boothWait.play(); } catch (_) {} }
+        if (boothWait && !boothWait.hidden) reseed(boothWait);
       }
     }
   });
